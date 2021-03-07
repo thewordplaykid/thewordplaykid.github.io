@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TheWordplayKid</title>
+<meta charset="UTF-8">
+<style>
+	body{
+    	background-color:black;
+        color:white;
+        font-family:monospace;
+		overflow:auto;
+    }
+    div{
+        position:relative;
+    }
+	.letter{
+    	position:absolute;
+    }
+</style>
+</head>
+<body>
+	<div id="shuffle-space"></div>
+<script>
+String.prototype.replaceAt=function(index, character) {
+	return this.substr(0, index) + character + this.substr(index+character.length);
+}
+var shuffle_space = document.getElementById('shuffle-space');
+var text = 'YOU KNOW WHAT THEY SAY BEAUTY IS IN THE EYES OF THE BEHOLDER ';
+var shuffled = 'BIDE THY BEAST THOU SHALT NOT IF HE KNOWS WHY ARE YOU EYE EYE';
+var W = 10+text.length;
+var H = 16;
+var started = false;
+var nodes = [];
+var sum_dx = 0;
+var sum_dy = 0;
+for(var i=0; i<text.length; i++) {
+	var n = document.createElement('div');
+	n.innerHTML = text[i];
+	n.className = 'letter';
+	n.x = i + W/2 - text.length/2;
+	n.y = H/2;
+	n.style.top = 0.75*n.y+'em';
+	n.style.left = 0.75*n.x+'em';
+	
+	var ii = shuffled.indexOf(text[i]);
+	n.dest_x = ii + W/2 - text.length/2;
+	shuffled = shuffled.replaceAt(ii, '#');
+	n.dest_y = n.y;
+	
+	n.dx = 0.01*Math.random();
+	n.dy = Math.abs(0.01*Math.random());
+	n.ddx = 0.0; n.ddy = 0.0;
+	n.ddx0 = 0.0; n.ddy0 = 0.0;
+	sum_dx += n.dx;
+	sum_dy += n.dy;
+	shuffle_space.appendChild(n);
+	nodes.push(n);
+}
+for(var i=0; i<nodes.length; i++) {
+	var n = nodes[i];
+	n.dx -= sum_dx/nodes.length;
+	n.dy -= sum_dy/nodes.length;
+}
+document.onclick = function() {
+	started = true;
+}
+var time_scale = 10;
+var inert_time = 0;
+var elapsed_time = 0.0;
+var previous_time=0;
+function animate() {
+	requestAnimationFrame(animate);
+	if(!started) return;
+	if(previous_time==0) previous_time = +new Date();
+	var current_time = +new Date();
+	var dt = current_time - previous_time;
+	previous_time = current_time;
+	if(dt>500) { return; }
+	if(inert_time>0) inert_time-=dt;
+	else elapsed_time += dt;
+	
+	for(var i=0; i<nodes.length; i++) {
+		var n = nodes[i];
+		n.ddx0 = n.ddx;
+		n.ddy0 = n.ddy;
+		n.ddx = 0;
+		n.ddy = 0;
+	}
+	
+	var goal_v2 = 0.001*Math.max(time_scale-elapsed_time, 0.1)/time_scale;
+	
+	for(var i=0; i<nodes.length; i++) {
+		var n = nodes[i];
+		for(var j=i+1; j<nodes.length; j++) {
+			var p = nodes[j];
+			var px = p.x-n.x;
+			var py = p.y-n.y;
+			var r2 = px*px + py*py;
+			var r4 = r2*r2 + 0.1;
+			n.ddx += 0.000001*px*(-1/r4);
+			p.ddx -= 0.000001*px*(-1/r4);
+			n.ddy += 0.000001*py*(-1/r4);
+			p.ddy -= 0.000001*py*(-1/r4);
+		}
+		var dest_x = n.dest_x-n.x;
+		var dest_y = n.dest_y-n.y;
+		r2 = dest_x*dest_x + dest_y*dest_y;
+		
+		var strength = Math.min( (elapsed_time/time_scale)*(elapsed_time/time_scale), 0.9);
+		n.ddx += 0.0005*strength*dest_x*(1/(r2+0.5));
+		n.ddy += 0.0005*strength*dest_y*(1/(r2+0.5));
+	}
+	
+	for(var i=0; i<nodes.length; i++) {
+		var n = nodes[i];
+		n.dx += 0.25*(n.ddx+n.ddx0)*dt;
+		n.dy += 0.25*(n.ddy+n.ddy0)*dt;
+	}
+	for(var i=0; i<nodes.length; i++) {
+		var n = nodes[i];
+		var v2 = n.dx*n.dx + n.dy*n.dy;
+		n.dx += (n.dx>0 ? 1 : -1)*0.1*(goal_v2-v2);
+		n.dy += (n.dx>0 ? 1 : -1)*0.1*(goal_v2-v2);
+	}
+	
+	for(var i=0; i<nodes.length; i++) {
+		var n = nodes[i];
+		n.x += n.dx*dt + n.ddx*dt*dt;
+		n.y += n.dy*dt + n.ddy*dt*dt;
+		
+		if(n.x<0) { n.x=0; n.dx =  0.1*Math.abs(n.dx);}
+		if(n.x>W) { n.x=W; n.dx = -0.1*Math.abs(n.dx);}
+		if(n.y<0) { n.y=0; n.dy =  0.1*Math.abs(n.dy);}
+		if(n.y>H) { n.y=H; n.dy = -0.1*Math.abs(n.dy);}
+		
+		n.style.top = 0.75*n.y+'em';
+		n.style.left = 0.75*n.x+'em';
+	}
+}
+animate();
+
+</script>
+</body>
+</html>
